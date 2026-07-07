@@ -197,7 +197,7 @@ async def vps_login(body: VpsLoginRequest, request: Request, response: Response,
         user = User(
             username=vps_username,
             hashed_password=hash_password(secrets.token_hex(32)),
-            role="viewer",
+            role="manager",
             display_name=display,
             sales_name="",
             dealer_id="",
