@@ -300,6 +300,13 @@ var API = '';
 var storeMap = {};
 var _role = '';
 
+function fmtAmt(v) {
+  if (!v || v <= 0) return null;
+  if (v >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'm';
+  if (v >= 1000)    return '$' + (v / 1000).toFixed(1) + 'k';
+  return '$' + v.toFixed(0);
+}
+
 // Initialize date
 (function(){
   var d = new Date();
@@ -519,8 +526,8 @@ function loadHistory(){
         +'<td><strong>'+tv+'</strong></td>'
         +'<td>'+n(fn.touch_count)+'</td>'
         +'<td>'+n(fn.deal_count)+'</td>'
-        +'<td>'+(amt>0
-          ? '<span class="tag-green">¥'+(amt/10000).toFixed(2)+'w</span>'
+        +'<td>'+(fmtAmt(amt)
+          ? '<span class="tag-green">'+fmtAmt(amt)+'</span>'
           : '<span class="num-zero">—</span>')+'</td>'
         +'<td style="color:var(--s400);font-size:.72rem">'+(r.submitted_by||'—')+'</td>'
         +'</tr>';
@@ -528,7 +535,7 @@ function loadHistory(){
     document.getElementById('histBody').innerHTML = html;
     document.getElementById('histFooter').textContent =
       rows.length+' records  |  Total Visits: '+totVisit+'  |  Shown: '+totShown
-      +'  |  Sold: '+totSold+'  |  Sell-out: ¥'+(totAmt/10000).toFixed(2)+'w';
+      +'  |  Sold: '+totSold+'  |  Sell-out: '+(fmtAmt(totAmt)||'$0');
   })
   .catch(function(){
     document.getElementById('histBody').innerHTML=
