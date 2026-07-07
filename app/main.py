@@ -20,8 +20,8 @@ from app.models.store_seed import seed_stores
 from app.pages.router import router as pages_router
 from app.walkin.router import router as walkin_router
 
-PUBLIC_PATHS = {"/login", "/api/auth/login", "/api/auth/config", "/health",
-                "/docs", "/openapi.json", "/redoc"}
+PUBLIC_PATHS = {"/login", "/api/auth/login", "/api/auth/config", "/api/auth/vps-login",
+                "/health", "/docs", "/openapi.json", "/redoc"}
 
 
 @asynccontextmanager
@@ -38,7 +38,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Walikin Submit", version="1.0.0", lifespan=lifespan)
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
+_CORS_ORIGINS = [
+    "https://admin.vertu.cn",
+    "https://pdca-workbench.vertu.cn",
+    "http://localhost:8768",
+    "http://127.0.0.1:8768",
+]
+app.add_middleware(CORSMiddleware, allow_origins=_CORS_ORIGINS, allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
 
 

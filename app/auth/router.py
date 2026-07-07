@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import secrets
 import time
 from collections import defaultdict
 from datetime import timedelta
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
@@ -135,3 +136,93 @@ async def change_password(body: ChangePasswordRequest, request: Request, respons
                         max_age=settings.access_token_expire_minutes * 60)
     log_action(user.username, "change_password", ip=request.client.host if request.client else "")
     return {"ok": True, "access_token": new_token}
+
+
+class VpsLoginRequest(BaseModel):
+    sessionID: str
+    userId: int
+
+
+def _set_token_cookie(response: Response, token: str, settings) -> None:
+    """Set JWT cookie; SameSite=None for cross-site iframe when secure_cookies is on."""
+    samesite = "none" if settings.secure_cookies else "lax"
+    response.set_cookie(
+        key="pdca_token", value=token, httponly=True,
+        secure=settings.secure_cookies, samesite=samesite,
+        max_age=settings.access_token_expire_minutes * 60,
+    )
+
+
+@router.post("/vps-login")
+async def vps_login(body: VpsLoginRequest, request: Request, response: Response,
+                    session: Annotated[Session, Depends(get_session)]):
+    """VPS/Odoo SSO login — validates Odoo session then issues local JWT cookie."""
+    from app.auth.odoo import fetch_odoo_employee, verify_odoo_session
+
+    if not body.sessionID or not body.userId:
+        raise HTTPException(status_code=400, detail="缺少 sessionID 或 userId")
+
+    settings = get_settings()
+    if not settings.odoo_base_url:
+        raise HTTPException(status_code=500, detail="系统配置错误，请联系管理员")
+
+    odoo_info = verify_odoo_session(settings.odoo_base_url, body.sessionID, body.userId)
+    if not odoo_info:
+        raise HTTPException(status_code=401, detail="登录已过期，请从 VPS 重新打开")
+
+    emp = fetch_odoo_employee(settings.odoo_base_url, body.sessionID, body.userId)
+
+    # Locate local user: first by odoo_user_id, then by username pattern
+    user = session.exec(
+        select(User).where(User.odoo_user_id == body.userId)
+    ).first()
+    if not user:
+        vps_username = f"vps_{body.userId}"
+        user = session.exec(select(User).where(User.username == vps_username)).first()
+
+    if user:
+        if not user.is_active:
+            raise HTTPException(status_code=403, detail="账号已被禁用")
+        # Sync display name and odoo_user_id
+        if emp.get("name"):
+            user.display_name = emp["name"]
+        user.odoo_user_id = body.userId
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    else:
+        # Auto-create VPS user with viewer role
+        display = emp.get("name") or odoo_info.get("name") or f"VPS用户{body.userId}"
+        vps_username = f"vps_{body.userId}"
+        user = User(
+            username=vps_username,
+            hashed_password=hash_password(secrets.token_hex(32)),
+            role="viewer",
+            display_name=display,
+            sales_name="",
+            dealer_id="",
+            is_active=True,
+            must_change_password=False,
+            odoo_user_id=body.userId,
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        log_action(user.username, "vps_auto_create", ip=request.client.host if request.client else "")
+
+    log_action(user.username, "vps_login", ip=request.client.host if request.client else "")
+    pwd_v = getattr(user, "pwd_version", 0) or 0
+    token = create_access_token(
+        {"sub": user.username, "role": user.role, "pwd_v": pwd_v},
+        timedelta(minutes=settings.access_token_expire_minutes),
+    )
+    _set_token_cookie(response, token, settings)
+    return {
+        "ok": True,
+        "next": "/walkin-submit",
+        "user": {
+            "username": user.username,
+            "name": user.display_name,
+            "role": user.role,
+        },
+    }

@@ -90,6 +90,7 @@ def _migrate_schema() -> None:
         "ALTER TABLE dealer_stores ADD COLUMN IF NOT EXISTS dealer_level VARCHAR(8) DEFAULT 'L1'",
         "ALTER TABLE dealer_stores ADD COLUMN IF NOT EXISTS sales_owner VARCHAR(64) DEFAULT ''",
         "ALTER TABLE walkin_daily_reports ADD COLUMN IF NOT EXISTS walkin_visits INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS odoo_user_id INTEGER DEFAULT NULL",
     ]
     patches_sqlite = [
         "ALTER TABLE users ADD COLUMN must_change_password BOOLEAN DEFAULT 1",
@@ -99,6 +100,7 @@ def _migrate_schema() -> None:
         "ALTER TABLE dealer_stores ADD COLUMN dealer_level VARCHAR(8) DEFAULT 'L1'",
         "ALTER TABLE dealer_stores ADD COLUMN sales_owner VARCHAR(64) DEFAULT ''",
         "ALTER TABLE walkin_daily_reports ADD COLUMN walkin_visits INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN odoo_user_id INTEGER DEFAULT NULL",
     ]
     with engine.connect() as conn:
         for sql in (patches_pg if dialect == "postgresql" else patches_sqlite):

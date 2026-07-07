@@ -31,6 +31,7 @@ class Settings:
         self.log_level = os.environ.get("WALKIN_LOG_LEVEL", "INFO")
         self.secure_cookies = os.environ.get("WALKIN_SECURE_COOKIES", "0") == "1"
         self.auth_mode = os.environ.get("WALKIN_AUTH_MODE", "local").strip().lower()
+        self.odoo_base_url = os.environ.get("ODOO_BASE_URL", "").strip().rstrip("/")
 
     def _resolve_database_url(self) -> str:
         url = os.environ.get("WALKIN_DATABASE_URL", "").strip()

@@ -313,9 +313,34 @@ var _role = '';
 // Read preset store from URL (?store=STORE_ID)
 var _presetStore = new URLSearchParams(location.search).get('store') || '';
 
+// VPS/Odoo SSO: detect session_id + user_id in URL, exchange for local session
+function _attemptVpsLogin() {
+  var params = new URLSearchParams(location.search);
+  var sessionId = params.get('session_id');
+  var userId = params.get('user_id');
+  if (!sessionId || !userId) return Promise.resolve(false);
+  return fetch('/api/auth/vps-login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    credentials: 'include',
+    body: JSON.stringify({sessionID: sessionId, userId: parseInt(userId, 10)}),
+  }).then(function(r) {
+    if (!r.ok) return false;
+    // Clean sensitive params from address bar
+    params.delete('session_id');
+    params.delete('user_id');
+    var clean = location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState(null, '', clean);
+    return true;
+  }).catch(function() { return false; });
+}
+
 // Load current user + visible stores
-fetch('/api/auth/me', {credentials:'include'})
-  .then(function(r){ return r.ok ? r.json() : null; })
+var _ssoInProgress = true;
+_attemptVpsLogin().then(function() {
+  _ssoInProgress = false;
+  return fetch('/api/auth/me', {credentials:'include'});
+}).then(function(r){ return r && r.ok ? r.json() : null; })
   .then(function(me){
     if (!me) { location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search); return; }
     _role = me.role || '';

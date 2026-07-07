@@ -20,6 +20,7 @@ class User(SQLModel, table=True):
     display_name: str = Field(default="", max_length=128)
     sales_name: str = Field(default="", max_length=128, description="对应物流 CSV 中的 salesperson")
     dealer_id: str = Field(default="", max_length=64, description="dealer角色绑定的门店store_id")
+    odoo_user_id: Optional[int] = Field(default=None, nullable=True, index=True)
     is_active: bool = Field(default=True)
     must_change_password: bool = Field(default=True)
     pwd_version: int = Field(default=0)
