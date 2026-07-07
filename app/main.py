@@ -59,6 +59,9 @@ async def auth_redirect_middleware(request: Request, call_next):
     auth = request.headers.get("authorization", "")
     if not token and not auth.startswith("Bearer "):
         if not path.startswith("/login"):
+            # Let through if VPS SSO params present — frontend JS handles the exchange
+            if request.query_params.get("session_id") and request.query_params.get("user_id"):
+                return await call_next(request)
             return RedirectResponse(f"/login?next={path}")
     return await call_next(request)
 
