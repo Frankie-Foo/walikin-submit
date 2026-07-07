@@ -1,0 +1,10 @@
+services:
+  walikin-submit:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8768:8768"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
