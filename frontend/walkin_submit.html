@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Store Five-Kit Daily Report · PDCA Workbench</title>
+  <style>
+    :root{--blue:#4e9ef5;--green:#10b981;--red:#f43f5e;--amber:#f59e0b;--purple:#a855f7;
+          --bg:#0b0d13;--surf:#13182a;--surf2:#1a2035;--border:rgba(255,255,255,.07);
+          --t1:#e2e8f0;--t2:#94a3b8;--t3:#475569}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+         background:var(--bg);color:var(--t1);min-height:100vh}
+
+    /* ── Top Bar ── */
+    .topbar{background:rgba(11,13,19,.95);backdrop-filter:blur(12px);
+            border-bottom:1px solid var(--border);padding:1rem 1.5rem;
+            display:flex;align-items:center;gap:.75rem;position:sticky;top:0;z-index:100}
+    .topbar-title{font-size:1rem;font-weight:700;color:var(--t1)}
+    .topbar-sub{font-size:.75rem;color:var(--t3);margin-top:2px}
+    .back-btn{margin-left:auto;display:inline-flex;align-items:center;gap:.3rem;
+              font-size:.75rem;color:var(--t3);text-decoration:none;
+              padding:.35rem .8rem;border:1px solid rgba(255,255,255,.1);border-radius:6px;white-space:nowrap;transition:all .15s}
+    .back-btn:hover{border-color:rgba(255,255,255,.2);color:var(--t2)}
+
+    /* ── Tab Bar ── */
+    .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surf);padding:0 1.5rem}
+    .tab-btn{padding:.7rem 1.2rem;font-size:.875rem;font-weight:600;color:var(--t3);
+             background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s}
+    .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+
+    /* ── Layout ── */
+    .container{max-width:800px;margin:1.5rem auto;padding:0 1rem 5rem}
+    .container-wide{max-width:1100px;margin:1.5rem auto;padding:0 1rem 5rem}
+
+    /* ── Card ── */
+    .card{background:var(--surf);border-radius:14px;border:1px solid var(--border);padding:1.4rem 1.6rem;margin-bottom:1rem}
+    .card-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                color:var(--t3);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+    .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+
+    /* ── Form Base ── */
+    .field{margin-bottom:.85rem}
+    label{display:block;font-size:.8rem;font-weight:600;color:var(--t2);margin-bottom:.3rem}
+    label .req{color:var(--red);margin-left:2px}
+    input[type=text],input[type=date],input[type=number],select,textarea{
+      width:100%;padding:.5rem .75rem;border:1.5px solid rgba(255,255,255,.1);border-radius:8px;
+      font-size:.9rem;color:var(--t1);background:rgba(255,255,255,.05);
+      transition:border-color .2s;font-family:inherit;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+    textarea{resize:vertical;min-height:60px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+
+    /* ── Source Grid ── */
+    .source-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.5rem}
+    .src-item{text-align:center}
+    .src-en{font-size:.65rem;font-weight:700;color:var(--t3);letter-spacing:.03em;margin-bottom:.2rem}
+    .src-sub{font-size:.62rem;color:var(--t4,#334155);margin-bottom:.3rem}
+    .src-item input{text-align:center;font-size:1.05rem;font-weight:700;padding:.45rem .15rem;border-radius:8px}
+    .src-item.walkin input{border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.07)}
+    .src-item.walkin input:focus{border-color:#a855f7}
+    .src-item.appt input{border-color:rgba(78,158,245,.3)}
+    .src-item.online input{border-color:rgba(14,165,233,.3)}
+    .src-item.referral input{border-color:rgba(16,185,129,.3)}
+    .src-item.sa input{border-color:rgba(245,158,11,.3)}
+
+    /* Total Bar */
+    .total-bar{background:rgba(78,158,245,.08);border:1px solid rgba(78,158,245,.2);
+               border-radius:10px;padding:.6rem 1rem;
+               margin-top:.75rem;display:flex;align-items:center;justify-content:space-between}
+    .total-bar .tl{font-size:.8rem;color:var(--blue);font-weight:600}
+    .total-bar .tv{font-size:1.4rem;font-weight:800;color:var(--blue)}
+
+    /* ── Product Shown + Sales ── */
+    .product-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;align-items:end}
+    .product-grid .big-input input{
+      text-align:center;font-size:1.4rem;font-weight:800;padding:.6rem .4rem;border-radius:10px}
+    .conv-badge{text-align:center;padding:.55rem;background:rgba(255,255,255,.04);border-radius:10px;
+                font-size:.72rem;color:var(--t3)}
+    .conv-badge .cv{display:block;font-size:1.3rem;font-weight:800;color:var(--green);margin-top:.1rem}
+
+    /* Sell-out */
+    .sellout-box{background:rgba(16,185,129,.06);border:1.5px solid rgba(16,185,129,.2);
+                 border-radius:10px;padding:1rem 1.2rem;margin-top:.75rem}
+    .sellout-box label{color:var(--green);font-size:.82rem;font-weight:700}
+    .sellout-box input{border-color:rgba(16,185,129,.3);font-size:1.2rem;font-weight:800;
+                       text-align:right;margin-top:.3rem;background:rgba(16,185,129,.05)}
+    .sellout-note{font-size:.68rem;color:var(--green);margin-top:.3rem;opacity:.8}
+
+    /* Submit Button */
+    .btn-submit{width:100%;padding:.85rem;font-size:.95rem;font-weight:700;
+                background:rgba(78,158,245,.25);color:var(--blue);
+                border:1px solid rgba(78,158,245,.4);border-radius:10px;cursor:pointer;transition:all .2s;margin-top:.5rem}
+    .btn-submit:hover{background:rgba(78,158,245,.35);transform:translateY(-1px)}
+    .btn-submit:disabled{opacity:.5;cursor:default;transform:none}
+
+    /* Alert */
+    .hint{font-size:.68rem;color:var(--t3);margin-top:.25rem}
+    .alert{padding:.75rem 1rem;border-radius:10px;margin-bottom:.85rem;font-size:.875rem;font-weight:600;display:none}
+    .alert.ok{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.25);display:block}
+    .alert.err{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.25);display:block}
+
+    /* ── History Table ── */
+    .filter-row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem}
+    .filter-row input,.filter-row select{
+      padding:.42rem .7rem;font-size:.8rem;border:1.5px solid rgba(255,255,255,.1);border-radius:8px;
+      font-family:inherit;max-width:200px;background:rgba(255,255,255,.05);color:var(--t1);outline:none}
+    .btn-sm{padding:.42rem .9rem;font-size:.78rem;font-weight:700;
+            background:rgba(78,158,245,.2);color:var(--blue);border:1px solid rgba(78,158,245,.3);border-radius:7px;cursor:pointer}
+    .btn-sm:hover{background:rgba(78,158,245,.3)}
+    .btn-export{padding:.42rem .9rem;font-size:.78rem;font-weight:700;
+                background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.25);
+                border-radius:7px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem}
+    .btn-export:hover{background:rgba(16,185,129,.25)}
+    .tbl-wrap{overflow-x:auto}
+    .hist-table{width:100%;border-collapse:collapse;font-size:.82rem;white-space:nowrap}
+    .hist-table th{background:rgba(255,255,255,.03);padding:.5rem .7rem;text-align:center;
+                   font-size:.7rem;font-weight:700;color:var(--t3);border-bottom:1px solid var(--border)}
+    .hist-table th.left{text-align:left}
+    .hist-table td{padding:.55rem .7rem;border-bottom:1px solid rgba(255,255,255,.03);text-align:center;vertical-align:middle;color:var(--t1)}
+    .hist-table td.left{text-align:left}
+    .hist-table tr:hover td{background:rgba(255,255,255,.02)}
+    .num-zero{color:var(--t3)}
+    .tag-green{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;
+               font-weight:700;background:rgba(16,185,129,.12);color:var(--green)}
+    .tag-blue{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;
+              font-weight:700;background:rgba(78,158,245,.12);color:var(--blue)}
+    .empty{text-align:center;padding:2.5rem;color:var(--t3);font-size:.85rem}
+    .hist-footer{margin-top:.6rem;font-size:.78rem;color:var(--t3)}
+
+    /* ── Responsive ── */
+    @media(max-width:600px){
+      .source-grid{grid-template-columns:repeat(3,1fr)}
+      .product-grid{grid-template-columns:1fr}
+      .grid-2{grid-template-columns:1fr}
+      .card{padding:1rem .85rem}
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Store Five-Kit Daily Report</div>
+    <div class="topbar-sub">Walk-ins · Prospects · Appointments · Online · Referral · SA</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('submit',this)">📝 Submit</button>
+  <button class="tab-btn" onclick="switchTab('history',this)">📋 History</button>
+</div>
+
+<!-- ══════════ Submit Tab ══════════ -->
+<div id="tab-submit" class="tab-panel active">
+<div class="container">
+  <div id="alert" class="alert"></div>
+  <form id="kitForm" novalidate>
+
+    <!-- Basic Info -->
+    <div class="card">
+      <div class="card-label"><span class="dot" style="background:#3b82f6"></span>Basic Info</div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Date<span class="req">*</span></label>
+          <input type="date" id="report_date" required />
+        </div>
+        <div class="field" id="dealer_field">
+          <label>Store / Distributor<span class="req">*</span></label>
+          <select id="dealer_id" required>
+            <option value="">— Loading… —</option>
+          </select>
+          <div id="dealer_display" style="display:none;padding:.5rem .75rem;border:1.5px solid rgba(255,255,255,.1);border-radius:8px;font-size:.9rem;color:var(--t1);background:rgba(255,255,255,.03)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Traffic Sources -->
+    <div class="card">
+      <div class="card-label"><span class="dot" style="background:#8b5cf6"></span>Traffic Sources (visitors)</div>
+      <div class="source-grid">
+        <div class="src-item walkin">
+          <div class="src-en">Walk-ins</div>
+          <div class="src-sub">Organic</div>
+          <input type="number" id="walkin_visits" min="0" value="0" />
+        </div>
+        <div class="src-item">
+          <div class="src-en">Prospects</div>
+          <div class="src-sub">Potential</div>
+          <input type="number" id="prospect_visits" min="0" value="0" />
+        </div>
+        <div class="src-item appt">
+          <div class="src-en">Appointments</div>
+          <div class="src-sub">Booked</div>
+          <input type="number" id="appointment_visits" min="0" value="0" />
+        </div>
+        <div class="src-item online">
+          <div class="src-en">Online</div>
+          <div class="src-sub">Digital</div>
+          <input type="number" id="online_visits" min="0" value="0" />
+        </div>
+        <div class="src-item referral">
+          <div class="src-en">Referral</div>
+          <div class="src-sub">Word of mouth</div>
+          <input type="number" id="referral_visits" min="0" value="0" />
+        </div>
+        <div class="src-item sa">
+          <div class="src-en">SA</div>
+          <div class="src-sub">Proactive</div>
+          <input type="number" id="sa_visits" min="0" value="0" />
+        </div>
+      </div>
+      <div class="total-bar">
+        <span class="tl">Total Visitors</span>
+        <span class="tv" id="totalVisits">0</span>
+      </div>
+    </div>
+
+    <!-- Product Interaction -->
+    <div class="card">
+      <div class="card-label"><span class="dot" style="background:#f59e0b"></span>Product Interaction</div>
+      <div class="product-grid">
+        <div class="big-input">
+          <label>Products Shown (times)</label>
+          <input type="number" id="touch_count" min="0" value="0" />
+        </div>
+        <div class="big-input">
+          <label>Products Sold (units)</label>
+          <input type="number" id="deal_count" min="0" value="0" />
+        </div>
+      </div>
+      <div style="margin-top:.6rem">
+        <div class="conv-badge">
+          Conversion Rate (Products Sold ÷ Products Shown)
+          <span class="cv" id="convRate">—</span>
+        </div>
+      </div>
+
+      <!-- Sell-out -->
+      <div class="sellout-box">
+        <label>Revenue （$）</label>
+        <input type="number" id="deal_amount_yuan" min="0" value="" placeholder="0" step="100" />
+        <div class="sellout-note">Actual sell-out amount; replaces system estimate after submission</div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="card">
+      <div class="card-label"><span class="dot" style="background:#64748b"></span>Notes (optional)</div>
+      <textarea id="notes" placeholder="Activities, exceptions, etc."></textarea>
+    </div>
+
+    <button type="submit" class="btn-submit" id="submitBtn">Submit</button>
+  </form>
+</div>
+</div>
+
+<!-- ══════════ History Tab ══════════ -->
+<div id="tab-history" class="tab-panel">
+<div class="container-wide">
+  <div class="card" style="padding:1rem 1.25rem">
+    <div class="filter-row">
+      <input type="month" id="hist_month" />
+      <select id="hist_dealer"><option value="">All Stores</option></select>
+      <button class="btn-sm" onclick="loadHistory()">Refresh</button>
+      <a id="exportBtn" class="btn-export" style="margin-left:auto">⬇ Excel</a>
+    </div>
+    <div class="tbl-wrap">
+      <table class="hist-table">
+        <thead>
+          <tr>
+            <th class="left">Date</th>
+            <th class="left">Store</th>
+            <th>Walk-ins</th>
+            <th>Prospects</th>
+            <th>Appt.</th>
+            <th>Online</th>
+            <th>Referral</th>
+            <th>SA</th>
+            <th>Total</th>
+            <th>Shown</th>
+            <th>Sold</th>
+            <th>Revenue</th>
+            <th>Submitted By</th>
+          </tr>
+        </thead>
+        <tbody id="histBody">
+          <tr><td colspan="13" class="empty">Click "Refresh" to load data</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="hist-footer" id="histFooter"></div>
+  </div>
+</div>
+</div>
+
+<script>
+var API = '';
+var storeMap = {};
+var _role = '';
+
+// Initialize date
+(function(){
+  var d = new Date();
+  var today = d.toISOString().slice(0,10);
+  var ym    = today.slice(0,7);
+  document.getElementById('report_date').value = today;
+  document.getElementById('hist_month').value  = ym;
+  document.getElementById('exportBtn').href = API + '/api/export/walkin-metrics?month=' + ym;
+})();
+
+// Read preset store from URL (?store=STORE_ID)
+var _presetStore = new URLSearchParams(location.search).get('store') || '';
+
+// Load current user + visible stores
+fetch('/api/auth/me', {credentials:'include'})
+  .then(function(r){ return r.ok ? r.json() : null; })
+  .then(function(me){
+    if (!me) { location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search); return; }
+    _role = me.role || '';
+    return fetch(API + '/api/my-stores', {credentials:'include'})
+      .then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(stores){
+        var sel  = document.getElementById('dealer_id');
+        var hSel = document.getElementById('hist_dealer');
+        sel.innerHTML = stores.length
+          ? '<option value="">— Select a store —</option>'
+          : '<option value="">— No stores available —</option>';
+        stores.forEach(function(s){
+          storeMap[s.store_id] = s.name;
+          var lbl = s.name + ' (' + s.country + ' · ' + (s.dealer_level||'L1') + ')';
+          sel.insertAdjacentHTML('beforeend',
+            '<option value="'+s.store_id+'" data-name="'+s.name+'">'+lbl+'</option>');
+          hSel.insertAdjacentHTML('beforeend',
+            '<option value="'+s.store_id+'">'+s.name+'</option>');
+        });
+        // dealer role: hide store filter in history
+        if (_role === 'dealer') {
+          hSel.parentElement && (hSel.parentElement.style.display = 'none');
+          hSel.style.display = 'none';
+        }
+        // dealer role: lock to single store; or pre-select from URL param
+        var lockId = '';
+        if (_role === 'dealer' && stores.length === 1) {
+          lockId = stores[0].store_id;
+        } else if (_presetStore) {
+          var found = stores.some(function(s){ return s.store_id === _presetStore; });
+          if (found) lockId = _presetStore;
+        }
+        if (lockId) {
+          sel.value = lockId;
+          if (_role === 'dealer') {
+            // dealer role: hide dropdown, show store name as plain text
+            sel.style.display = 'none';
+            var display = document.getElementById('dealer_display');
+            display.style.display = 'block';
+            display.textContent = storeMap[lockId] || lockId;
+          } else {
+            sel.disabled = true;
+            sel.style.cssText = 'background:rgba(255,255,255,.03);color:#475569';
+          }
+        }
+        // Update subtitle with current store
+        if (lockId && storeMap[lockId]) {
+          document.querySelector('.topbar-sub').textContent = storeMap[lockId];
+        }
+      });
+  })
+  .catch(function(){});
+
+// Tab switch
+function switchTab(tab, btn){
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('tab-'+tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'history') loadHistory();
+}
+
+// Live totals
+var srcIds = ['walkin_visits','prospect_visits','appointment_visits','online_visits','referral_visits','sa_visits'];
+function updateCalc(){
+  var total = 0;
+  srcIds.forEach(function(id){ total += pInt(id); });
+  document.getElementById('totalVisits').textContent = total;
+  var shown = pInt('touch_count');
+  var sold  = pInt('deal_count');
+  var cr = shown > 0 ? ((sold/shown)*100).toFixed(1)+'%' : '—';
+  document.getElementById('convRate').textContent = cr;
+}
+srcIds.concat(['touch_count','deal_count']).forEach(function(id){
+  document.getElementById(id).addEventListener('input', updateCalc);
+});
+
+// Submit
+document.getElementById('kitForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var alertEl = document.getElementById('alert');
+  alertEl.className = 'alert';
+  var date    = document.getElementById('report_date').value;
+  var dSel    = document.getElementById('dealer_id');
+  var did     = dSel.value;
+  var dname   = (dSel.selectedOptions[0] && dSel.selectedOptions[0].getAttribute('data-name')) || did;
+  if (!date){ showErr('Please select a date'); return; }
+  if (!did){  showErr('Please select a store'); return; }
+  var body = {
+    report_date: date, dealer_id: did, dealer_name: dname,
+    walkin_visits:       pInt('walkin_visits'),
+    prospect_visits:     pInt('prospect_visits'),
+    appointment_visits:  pInt('appointment_visits'),
+    online_visits:       pInt('online_visits'),
+    referral_visits:     pInt('referral_visits'),
+    sa_visits:           pInt('sa_visits'),
+    touch_count:         pInt('touch_count'),
+    deal_count:          pInt('deal_count'),
+    deal_amount_yuan:    parseFloat(document.getElementById('deal_amount_yuan').value||'0')||0,
+    notes:               document.getElementById('notes').value.trim()
+  };
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  fetch(API+'/api/walkin-metrics',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body), credentials:'include'
+  })
+  .then(function(r){
+    if (r.status===401){ location.href='/login?next=/walkin-submit/'; return null; }
+    return r.json().then(function(d){ return {ok:r.ok,d:d}; });
+  })
+  .then(function(res){
+    if (!res) return;
+    if (res.ok){
+      alertEl.className='alert ok';
+      alertEl.textContent='✓ Saved — '+dname+' · '+date;
+      window.scrollTo({top:0,behavior:'smooth'});
+      resetForm();
+    } else { showErr((res.d&&res.d.detail)||'Submit failed'); }
+  })
+  .catch(function(){ showErr('Network error, please retry'); })
+  .finally(function(){ btn.disabled=false; btn.textContent='Submit'; });
+});
+
+function pInt(id){ return parseInt(document.getElementById(id).value||'0',10)||0; }
+function showErr(msg){
+  var a=document.getElementById('alert');
+  a.className='alert err'; a.textContent='✕ '+msg;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function resetForm(){
+  srcIds.forEach(function(id){ document.getElementById(id).value='0'; });
+  ['touch_count','deal_count'].forEach(function(id){ document.getElementById(id).value='0'; });
+  document.getElementById('deal_amount_yuan').value='';
+  document.getElementById('notes').value='';
+  updateCalc();
+}
+
+// History
+function loadHistory(){
+  var month  = document.getElementById('hist_month').value;
+  var dealer = document.getElementById('hist_dealer').value;
+  document.getElementById('exportBtn').href =
+    API+'/api/export/walkin-metrics?month='+encodeURIComponent(month);
+  var url = API+'/api/walkin-metrics?month='+encodeURIComponent(month)
+                +'&dealer_id='+encodeURIComponent(dealer);
+  document.getElementById('histBody').innerHTML =
+    '<tr><td colspan="13" class="empty">Loading…</td></tr>';
+  fetch(url,{credentials:'include'})
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var rows = data.items||[];
+    if (!rows.length){
+      document.getElementById('histBody').innerHTML =
+        '<tr><td colspan="13" class="empty">No data this period</td></tr>';
+      document.getElementById('histFooter').textContent='';
+      return;
+    }
+    var html=''; var totVisit=0,totShown=0,totSold=0,totAmt=0;
+    rows.forEach(function(r){
+      var fk = r.five_kit||{}; var fn = r.funnel||{};
+      var tv  = fk.total||0;
+      var amt = fn.deal_amount_yuan||0;
+      totVisit+=tv; totShown+=fn.touch_count||0; totSold+=fn.deal_count||0; totAmt+=amt;
+      function n(v){ return (v||0)===0 ? '<span class="num-zero">0</span>' : v; }
+      html+='<tr>'
+        +'<td class="left">'+r.report_date+'</td>'
+        +'<td class="left" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">'
+          +(storeMap[r.dealer_id]||r.dealer_id)+'</td>'
+        +'<td>'+n(fk.walkin)+'</td>'
+        +'<td>'+n(fk.prospect)+'</td>'
+        +'<td>'+n(fk.appointment)+'</td>'
+        +'<td>'+n(fk.online)+'</td>'
+        +'<td>'+n(fk.referral)+'</td>'
+        +'<td>'+n(fk.sa)+'</td>'
+        +'<td><strong>'+tv+'</strong></td>'
+        +'<td>'+n(fn.touch_count)+'</td>'
+        +'<td>'+n(fn.deal_count)+'</td>'
+        +'<td>'+(amt>0
+          ? '<span class="tag-green">¥'+(amt/10000).toFixed(2)+'w</span>'
+          : '<span class="num-zero">—</span>')+'</td>'
+        +'<td style="color:var(--s400);font-size:.72rem">'+(r.submitted_by||'—')+'</td>'
+        +'</tr>';
+    });
+    document.getElementById('histBody').innerHTML = html;
+    document.getElementById('histFooter').textContent =
+      rows.length+' records  |  Total Visits: '+totVisit+'  |  Shown: '+totShown
+      +'  |  Sold: '+totSold+'  |  Sell-out: ¥'+(totAmt/10000).toFixed(2)+'w';
+  })
+  .catch(function(){
+    document.getElementById('histBody').innerHTML=
+      '<tr><td colspan="13" class="empty">Failed to load</td></tr>';
+  });
+}
+</script>
+</body>
+</html>
